@@ -53,7 +53,7 @@ Resources:
       Namespace: AWS/Lambda
       Period: 60
       Statistic: Sum
-      Threshold: 1
+      Threshold: 100
       TreatMissingData: notBreaching
       Dimensions:
         - Name: FunctionName
