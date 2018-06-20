@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Named api-gateway-jwt-authorizer-poc-lambda.
+Resources:
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "api-gateway-jwt-authorizer"
+      Handler: "com.billyjf.lambda.JWTHandler::handleRequest"
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        S3Bucket: "api-gateway-auth-poc"
+        S3Key: !Sub "jars/api-gateway-custom-authorizers-assembly-0.9.jar"
+      Runtime: java8
+      ReservedConcurrentExecutions: 1
+      MemorySize: '512'
+      Timeout: '300'
+  InvokePermissionLambdaCustomAuthorizer:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: arn:aws:execute-api:us-west-2:438053794079:so7o3tr66d/authorizers/nblc19
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: "api-gateway-jwt-authorizer"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+  POCAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: true
+      AlarmActions:
+        - !ImportValue SNSCell
+      AlarmDescription: "POC Should Never Get This Much Traffic!"
+      AlarmName: "POC Receiving Too Much Traffic"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      MetricName: Invocations
+      Namespace: AWS/Lambda
+      Period: 60
+      Statistic: Sum
+      Threshold: 1
+      TreatMissingData: notBreaching
+      Dimensions:
+        - Name: FunctionName
+          Value: api-gateway-jwt-authorizer
+
