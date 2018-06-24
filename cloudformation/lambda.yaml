@@ -10,7 +10,7 @@ Resources:
       Role: !GetAtt LambdaExecutionRole.Arn
       Code:
         S3Bucket: "api-gateway-auth-poc"
-        S3Key: !Sub "jars/api-gateway-custom-authorizers-assembly-0.9.jar"
+        S3Key: !Sub "jars/api-gateway-custom-authorizers-assembly-0.2.jar"
       Runtime: java8
       ReservedConcurrentExecutions: 1
       MemorySize: '512'

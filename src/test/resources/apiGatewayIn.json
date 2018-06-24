@@ -1,0 +1,5 @@
+{
+  "type": "TOKEN",
+  "methodArn": "arn:aws:execute-api:us-west-2:438053794079:so7o3tr66d/prod/GET/users",
+  "authorizationToken": "apiGatewayRocks"
+}

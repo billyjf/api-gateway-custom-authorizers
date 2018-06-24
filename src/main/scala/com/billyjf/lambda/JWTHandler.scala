@@ -1,6 +1,7 @@
 package com.billyjf.lambda
 
-import java.io.{InputStream, OutputStream}
+import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream}
+import java.util.stream.Collectors
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import org.slf4j.{Logger, LoggerFactory}
@@ -67,7 +68,9 @@ class JWTHandler(log: Logger) extends RequestStreamHandler {
     // and will apply to subsequent calls to any method/resource in the RestApi
     // made with the same token
 
-    log.info("Invoked.")
+    val apiGatewayIn: String = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"))
+
+    log.info(s"InputStream: $apiGatewayIn")
 
     os.write(response.getBytes)
   }
