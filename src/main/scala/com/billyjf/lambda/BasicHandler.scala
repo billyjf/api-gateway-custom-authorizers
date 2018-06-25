@@ -1,12 +1,14 @@
 package com.billyjf.lambda
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream}
+import java.util.Base64
 import java.util.stream.Collectors
 
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import org.slf4j.{Logger, LoggerFactory}
 import io.circe.generic.auto._
 import io.circe.syntax._
+import io.circe.parser._
 
 case class Policy(principalId: String, policyDocument: PolicyDocument)
 
@@ -16,20 +18,43 @@ case class PolicyDocument(Statement: List[Statement]) {
 
 case class Statement(Action: String, Effect: String, Resource: String)
 
-class JWTHandler(log: Logger) extends RequestStreamHandler {
+case class AuthorizerIn(`type`: String, methodArn: String, authorizationToken: String)
+
+case class BasicAuthorizationToken(BasicAuthorizationToken: String) {
+  val decoded: String = new String(Base64.getDecoder.decode(BasicAuthorizationToken.split("Basic ")(1)))
+  val parts: Array[String] = decoded.split(':')
+  val user: String = parts(0)
+  val password: String = parts(1)
+}
+
+class BasicHandler(log: Logger) extends RequestStreamHandler {
   def this() = this(log = LoggerFactory.getLogger(getClass.getSimpleName))
 
-  val response: String = Policy("xyz",
-    PolicyDocument(
-      List(
-        Statement("execute-api:Invoke", "Allow", "arn:aws:execute-api:*:*:*/prod/GET/users")
-      )
-    )
-  ).asJson.toString
+  val EXECUTE_API_INVOKE: String = "execute-api:Invoke"
+  val ALLOW: String = "Allow"
+  val DENY: String = "Deny"
+  val ANY_API: String = "arn:aws:execute-api:*:*:*"
+
+  val HARD_CODED_VALID_USER: String = "apiGateway"
+  val HARD_CODED_VALID_PASSWORD: String = "isAwesome"
 
   def handleRequest(is: InputStream, os: OutputStream, context: Context): Unit = {
+    val isJsonBody: String = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"))
+    val policyIn: AuthorizerIn = parse(isJsonBody).right.get.as[AuthorizerIn].right.get
+    val authorization: BasicAuthorizationToken = BasicAuthorizationToken(policyIn.authorizationToken)
 
-    // TODO de-serialize is
+    def isAuthorized: Boolean = {
+      authorization.user.equals(HARD_CODED_VALID_USER) && authorization.password.equals(HARD_CODED_VALID_PASSWORD)
+    }
+
+    val statement: Statement = Statement(
+      EXECUTE_API_INVOKE,
+      if (isAuthorized) ALLOW else DENY,
+      s"$ANY_API/prod/GET/users"
+    )
+
+    log.info(s"${authorization.user} is ${if (!isAuthorized) "not"} authorized.")
+
     // validate the incoming token// validate the incoming token
 
     // and produce the principal user identifier associated with the token
@@ -68,10 +93,14 @@ class JWTHandler(log: Logger) extends RequestStreamHandler {
     // and will apply to subsequent calls to any method/resource in the RestApi
     // made with the same token
 
-    val apiGatewayIn: String = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"))
-
-    log.info(s"InputStream: $apiGatewayIn")
-
-    os.write(response.getBytes)
+    os.write(
+      Policy("xyz",
+        PolicyDocument(
+          List(
+            statement
+          )
+        )
+      ).asJson.toString.getBytes
+    )
   }
 }

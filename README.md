@@ -3,8 +3,9 @@
 # AWS API Gateway Custom Authorizers
 This serves as the minimum necessary to implement several different auth methods for API Gateway.
 
-## JWT
+## Basic
 
+## JWT
 
 ## SAML SSO
 

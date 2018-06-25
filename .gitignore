@@ -4,7 +4,5 @@
 
 # IntelliJ project files
 .idea
-*.iml
-project/project/target
-project/target
 target/
+/src/main/scala/com/billyjf/lambda/Scratch.sc
